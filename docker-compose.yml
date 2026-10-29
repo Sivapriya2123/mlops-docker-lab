@@ -1,0 +1,33 @@
+services:
+  trainer:
+    build: ./trainer
+    volumes:
+      - model_store:/models
+
+  api:
+    build: ./api
+    ports:
+      - "5001:5000"
+    volumes:
+      - model_store:/models
+    depends_on:
+      trainer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ui:
+    build: ./ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:5000
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  model_store:
